@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>منحنی درصد پاسخگویی بر حسب ساعت مطالعه</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;padding:16px;background:#f4f4f2;font-family:"B Nazanin","BNazanin",Tahoma,sans-serif;color:#222}
+.wrap{max-width:1100px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:8px;box-shadow:0 1px 4px #0002;background-image:linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%);background-size:20px 20px;background-position:0 0,10px 10px}
+canvas{width:100%;height:auto;display:block}
+button{margin-top:12px;padding:10px 22px;font:700 18px "B Nazanin",Tahoma,sans-serif;border:0;border-radius:8px;background:#1f5fbf;color:#fff;cursor:pointer}
+p{font-size:17px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card"><canvas id="c" width="2400" height="1400"></canvas></div>
+<button id="dl">ذخیره به‌صورت PNG</button>
+<p>نشانگر ماوس (یا انگشت) را روی نمودار حرکت دهید تا مقدار دقیق با دقت بسیار بالا نمایش داده شود (مقدار x پیوسته است). خروجی PNG با پس‌زمینهٔ شفاف ذخیره می‌شود (خانه‌های شطرنجی فقط برای نمایش شفافیت است).</p>
+</div>
+<script>
+const T="'B Titr','BTitr',Tahoma,sans-serif", N="'B Nazanin','BNazanin',Tahoma,sans-serif";
+const W=1200,H=700,L=110,R=1140,TOP=120,BOT=580,MAXH=600;
+const tiers=[[0.25,85],[0.35,340],[0.40,1020]]; // [سهم، ثابت زمانی به ساعت]
+const f=h=>100*tiers.reduce((s,[a,t])=>s+a*(1-Math.exp(-h/t)),0);
+const fa=(s)=>String(s).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]).replace('.','٫');
+const X=h=>L+(h/MAXH)*(R-L), Y=p=>BOT-p/100*(BOT-TOP);
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+function txt(s,x,y,font,align,color){ctx.font=font;ctx.textAlign=align;ctx.fillStyle=color||'#222';ctx.direction='rtl';ctx.fillText(s,x,y)}
+function draw(hov){
+ ctx.setTransform(2,0,0,2,0,0);ctx.clearRect(0,0,W,H);
+ txt('منحنی درصد پاسخگویی به سؤالات یک درس کنکوری بر حسب ساعت مطالعهٔ کلی',W/2,45,'bold 30px '+T,'center');
+ txt('مدل: تابع نمایی اشباعی با مشتق دوم منفی (x = واحد دلخواه ساعت مطالعه)',W/2,80,'20px '+N,'center','#444');
+ ctx.lineWidth=1;ctx.font='18px '+N;
+ for(let p=0;p<=100;p+=20){ctx.strokeStyle='#0002';ctx.beginPath();ctx.moveTo(L,Y(p));ctx.lineTo(R,Y(p));ctx.stroke();txt(fa(p)+'٪',L-10,Y(p)+6,'18px '+N,'right')}
+ for(let h=0;h<=MAXH;h+=100){ctx.strokeStyle='#0001';ctx.beginPath();ctx.moveTo(X(h),TOP);ctx.lineTo(X(h),BOT);ctx.stroke();txt(h===0?'۰':(h===100?'x':fa(h/100)+'x'),X(h),BOT+28,'italic 20px '+N,'center')}
+ ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(L,BOT);ctx.lineTo(R,BOT);ctx.moveTo(L,TOP);ctx.lineTo(L,BOT);ctx.stroke();
+ txt('ساعت مطالعهٔ کلی',(L+R)/2,BOT+64,'bold 22px '+T,'center');
+ ctx.save();ctx.translate(32,(TOP+BOT)/2);ctx.rotate(-Math.PI/2);txt('درصد پاسخگویی صحیح',0,0,'bold 22px '+T,'center');ctx.restore();
+ // ناحیه‌های رنگی زیر منحنی، بخش به بخش
+ const pal=['#4e79a7','#59a14f','#edc948','#f28e2b','#e15759','#b07aa1'];
+ for(let i=0;i<6;i++){const a=i*100,b=a+100,m=(R-L)/6*4;ctx.beginPath();ctx.moveTo(X(a),BOT);
+  for(let k=0;k<=m;k++){const h=a+(b-a)*k/m;ctx.lineTo(X(h),Y(f(h)))}
+  ctx.lineTo(X(b),BOT);ctx.closePath();ctx.fillStyle=pal[i]+'aa';ctx.fill();
+  ctx.strokeStyle='#ffffffcc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(b),BOT);ctx.lineTo(X(b),Y(f(b)));ctx.stroke()}
+ // منحنی پیوسته
+ ctx.strokeStyle='#1f5fbf';ctx.lineWidth=4;ctx.lineJoin='round';ctx.beginPath();
+ const n=(R-L)*4;
+ for(let i=0;i<=n;i++){const h=MAXH*i/n;const x=X(h),y=Y(f(h));i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+ ctx.stroke();
+ if(hov!=null){
+  const h=Math.max(0,Math.min(MAXH,hov)),p=f(h),x=X(h),y=Y(p);
+  ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x,BOT);ctx.lineTo(x,y);ctx.lineTo(L,y);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#1f5fbf';ctx.beginPath();ctx.arc(x,y,6,0,7);ctx.fill();
+  const s=Math.round(h*3600),hh=Math.floor(s/3600),mm=Math.floor(s%3600/60),ss=s%60;
+  const label=fa((h/100).toFixed(3))+'x ← '+fa(p.toFixed(2))+'٪';
+  ctx.font='bold 20px '+N;const w=ctx.measureText(label).width+24;
+  const bx=Math.min(Math.max(x-w/2,L),R-w),by=Math.max(y-52,TOP-5);
+  ctx.fillStyle='#fffffff0';ctx.strokeStyle='#1f5fbf';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(bx,by,w,32,6);ctx.fill();ctx.stroke();
+  txt(label,bx+w/2,by+23,'bold 20px '+N,'center','#111');
+ }
+}
+function move(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;const px=(t.clientX-r.left)/r.width*W;draw((px-L)/(R-L)*MAXH)}
+cv.addEventListener('mousemove',move);cv.addEventListener('touchmove',move,{passive:true});cv.addEventListener('mouseleave',()=>draw());
+document.getElementById('dl').onclick=()=>{draw();cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='study-hours-curve.png';a.click()},'image/png')};
+draw();
+if(document.fonts&&document.fonts.load){Promise.all(['bold 20px "B Titr"','20px "B Nazanin"'].map(x=>document.fonts.load(x))).finally(()=>draw())}
+</script>
+</body>
+</html>
